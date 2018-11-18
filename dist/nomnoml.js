@@ -1038,7 +1038,7 @@ nomnoml.parse = function (source){
 	})
 	var pureDirectives = _.filter(lines, isDirective)
 	var directives = {}
-	_.each(pureDirectives.map(function (line){
+	_.each(pureDirectives, function (line){
 		try {
 			var tokens =  line.text.substring(1).split(':')
 			directives[tokens[0].trim()] = tokens[1].trim()
@@ -1046,7 +1046,7 @@ nomnoml.parse = function (source){
 		catch (e) {
 			throw new Error('line ' + (line.index + 1))
 		}
-	}))
+	})
 	var pureDiagramCode = _.map(_.map(lines, 'text'), onlyCompilables).join('\n').trim()
 	var ast = nomnoml.transformParseIntoSyntaxTree(nomnoml.intermediateParse(pureDiagramCode))
 	ast.directives = directives
@@ -1273,14 +1273,6 @@ nomnoml.Compartment = function (lines, nodes, relations){
 }
 
 nomnoml.layout = function (measurer, config, ast){
-	function runDagre(input){
-		return dagre.layout()
-					.rankSep(config.spacing)
-					.nodeSep(config.spacing)
-					.edgeSep(config.spacing)
-					.rankDir(config.direction)
-					.run(input)
-	}
 	function measureLines(lines, fontWeight){
 		if (!lines.length)
 			return { width: 0, height: config.padding }
@@ -1300,14 +1292,25 @@ nomnoml.layout = function (measurer, config, ast){
 
 		_.each(c.nodes, layoutClassifier)
 
-		var g = new dagre.Digraph()
+		var g = new dagre.graphlib.Graph()
+		g.setGraph({
+			rankdir: config.direction,
+			//align: //undefined [UL, UR, DL, DR]
+			nodesep: config.spacing, //50 
+			edgesep: config.spacing, //10 
+			ranksep: config.spacing, //50 
+			//marginx: //0 
+			//marginy: //0 
+			//acyclicer: //undefined [greedy] 
+			//ranker: //network-simplex [network-simplex, tight-tree or longest-path]
+		});
 		_.each(c.nodes, function (e){
-			g.addNode(e.name, { width: e.width, height: e.height })
+			g.setNode(e.name, { width: e.width, height: e.height })
 		})
 		_.each(c.relations, function (r){
-			g.addEdge(r.id, r.start, r.end)
+			g.setEdge(r.start, r.end, { id: r.id })
 		})
-		var dLayout = runDagre(g)
+		dagre.layout(g)
 
 		function indexBy(list, key) {
 			var obj = {}
@@ -1318,15 +1321,18 @@ nomnoml.layout = function (measurer, config, ast){
 		var rels = indexBy(c.relations, 'id')
 		var nodes = indexBy(c.nodes, 'name')
 		function toPoint(o){ return {x:o.x, y:o.y} }
-		dLayout.eachNode(function(u, value) {
-			nodes[u].x = value.x
-			nodes[u].y = value.y
+		_.each(g.nodes(), function(name) {
+			var node = g.node(name)
+			nodes[name].x = node.x
+			nodes[name].y = node.y
 		})
-		dLayout.eachEdge(function(e, u, v, value) {
-			var start = nodes[u], end = nodes[v]
-			rels[e].path = _.map(_.flatten([start, value.points, end]), toPoint)
+		_.each(g.edges(), function(edgeObj) {
+			var edge = g.edge(edgeObj)
+			var start = nodes[edgeObj.v]
+			var end = nodes[edgeObj.w]
+			rels[edge.id].path = _.map(_.flatten([start, edge.points, end]), toPoint)
 		})
-		var graph = dLayout.graph()
+		var graph = g.graph()
 		var graphHeight = graph.height ? graph.height + 2*config.gutter : 0
 		var graphWidth = graph.width ? graph.width + 2*config.gutter : 0
 
@@ -1600,12 +1606,12 @@ var nomnoml = nomnoml || {};
 			return { down: 'TB', right: 'LR' }[word] || 'TB'
 		}
 		return {
-			center: _.contains(styleDef, 'center'),
-			bold: _.contains(styleDef, 'bold'),
-			underline: _.contains(styleDef, 'underline'),
-			italic: _.contains(styleDef, 'italic'),
-			dashed: _.contains(styleDef, 'dashed'),
-			empty: _.contains(styleDef, 'empty'),
+			center: _.includes(styleDef, 'center'),
+			bold: _.includes(styleDef, 'bold'),
+			underline: _.includes(styleDef, 'underline'),
+			italic: _.includes(styleDef, 'italic'),
+			dashed: _.includes(styleDef, 'dashed'),
+			empty: _.includes(styleDef, 'empty'),
 			fill: _.last(styleDef.match('fill=([^ ]*)')),
 			visual: _.last(styleDef.match('visual=([^ ]*)')) || 'class',
 			direction: directionToDagre(_.last(styleDef.match('direction=([^ ]*)')))

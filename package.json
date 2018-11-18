@@ -15,7 +15,7 @@
   ],
   "dependencies": {
     "lodash": "4.17.11",
-    "dagre": "0.4.x"
+    "dagre": "0.8.2"
   },
   "devDependencies": {
     "jshint": "2.9.5",
