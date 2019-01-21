@@ -159,8 +159,13 @@ var app = app || {}
 	function initPngDownloadLink(link){
 		link.addEventListener('click', doDownload, false);
 		function doDownload(){
-			var url = canvasElement.toDataURL('image/png')
-			link.href = url;
+			if (!!canvasElement.msToBlob) {
+				saveAs(canvasElement.msToBlob(), graphTitle + '.svg')
+			}
+			else {
+				canvasElement.toBlob(function (blob) { saveAs(blob, graphTitle + '.svg') })
+			}
+			e.preventDefault()
 		}
 	}
 
