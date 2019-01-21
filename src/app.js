@@ -160,10 +160,10 @@ var app = app || {}
 		link.addEventListener('click', doDownload, false);
 		function doDownload(){
 			if (!!canvasElement.msToBlob) {
-				saveAs(canvasElement.msToBlob(), graphTitle + '.svg')
+				saveAs(canvasElement.msToBlob(), graphTitle + '.png')
 			}
 			else {
-				canvasElement.toBlob(function (blob) { saveAs(blob, graphTitle + '.svg') })
+				canvasElement.toBlob(function (blob) { saveAs(blob, graphTitle + '.png') })
 			}
 			e.preventDefault()
 		}
